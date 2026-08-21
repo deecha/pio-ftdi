@@ -23,15 +23,25 @@
 // PIO on RP2350B sees a 32-GPIO window; base 16 covers GPIO16..47. RP2040's
 // PIO reaches every GPIO directly and has no window, so the base is 0 there
 // and PREL() below becomes the identity.
-#if PICO_PIO_USE_GPIO_BASE
-  #if (PIN_TCK < 16) || (PIN_TDI < 16) || (PIN_TDO < 16) || (PIN_TMS < 16)
-    #define PIO_GPIO_BASE 0
-  #else
-    #define PIO_GPIO_BASE 16
-  #endif
+// Derived from the pin numbers alone -- deliberately NOT from an SDK macro.
+// PICO_PIO_USE_GPIO_BASE lives in hardware/pio.h and NUM_BANK0_GPIOS is not
+// visible from pico.h either; keying off either one here silently evaluated
+// to 0, put the window at GPIO0-31, and left TDO/TMS on GPIO32/33 outside it.
+// JTAG dead, no compile error. Pin numbers are always in scope, so:
+//   any pin above 31 -> the window must start at 16 (covers GPIO16..47)
+//   otherwise        -> base 0 (covers GPIO0..31), which is also the only
+//                       option on RP2040, where PIO has no window at all
+#if (PIN_TCK > 31) || (PIN_TDI > 31) || (PIN_TDO > 31) || (PIN_TMS > 31)
+  #define PIO_GPIO_BASE 16
 #else
   #define PIO_GPIO_BASE 0
 #endif
+
+_Static_assert(PIN_TCK >= PIO_GPIO_BASE && PIN_TCK < PIO_GPIO_BASE + 32 &&
+               PIN_TDI >= PIO_GPIO_BASE && PIN_TDI < PIO_GPIO_BASE + 32 &&
+               PIN_TDO >= PIO_GPIO_BASE && PIN_TDO < PIO_GPIO_BASE + 32 &&
+               PIN_TMS >= PIO_GPIO_BASE && PIN_TMS < PIO_GPIO_BASE + 32,
+               "JTAG pins fall outside the 32-GPIO PIO window");
 
 // Relative pin index for DIRECT writes to the PINCTRL register, whose pin
 // fields are relative to PIO_GPIO_BASE. Verified against pico-sdk 2.1.1:
