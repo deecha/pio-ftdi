@@ -1,0 +1,9 @@
+build/
+build-*/
+_b/
+pico_sdk_import.cmake
+*.uf2
+*.elf
+*.bin
+*.dis
+*.hex

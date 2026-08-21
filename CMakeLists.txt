@@ -1,0 +1,98 @@
+cmake_minimum_required(VERSION 3.13)
+
+# RP2350B/Zen by default -- an unqualified `cmake ..` reproduces the working
+# configuration. For RP2040:
+#   cmake -DRP2040=1 -DJTAG_PINS="6;7;8;9" ..
+if(RP2040)
+    set(PICO_PLATFORM rp2040 CACHE STRING "")
+    if(NOT DEFINED PICO_BOARD)
+        set(PICO_BOARD pico CACHE STRING "")
+    endif()
+else()
+    set(PICO_PLATFORM rp2350 CACHE STRING "")
+    set(PICO_BOARD zen CACHE STRING "")
+endif()
+list(APPEND PICO_BOARD_HEADER_DIRS ${CMAKE_CURRENT_LIST_DIR}/boards)
+
+include(pico_sdk_import.cmake)
+
+project(zen_jtag C CXX ASM)
+set(CMAKE_C_STANDARD 11)
+
+pico_sdk_init()
+
+add_executable(zen_jtag
+    src/main.c
+    src/jtag_pio.c
+    src/mpsse.c
+    src/ftdi_usb.c
+)
+
+pico_generate_pio_header(zen_jtag ${CMAKE_CURRENT_LIST_DIR}/src/jtag.pio)
+
+target_include_directories(zen_jtag PRIVATE ${CMAKE_CURRENT_LIST_DIR}/src)
+
+target_link_libraries(zen_jtag
+    pico_stdlib
+    pico_unique_id
+    hardware_pio
+    hardware_clocks
+    hardware_gpio
+    tinyusb_device
+)
+
+# Build as an FT2232D instead (full-speed part, no 0x8A/0x8B/0x8C/0x8D):
+#   cmake -DFTDI_AS_D=1 ..
+# Bring-up: cmake -DTDO_PULLDOWN=1 .. to bias TDO low instead of high.
+if(TDO_PULLDOWN)
+    target_compile_definitions(zen_jtag PRIVATE TDO_PULL_UP=0)
+endif()
+
+# Emulate a single-channel FT232H (0403:6014) instead of an FT2232H.
+#   cmake -DSINGLE_CHANNEL=1 ..
+# Optionally match a specific known-good cable's product string:
+#   cmake -DSINGLE_CHANNEL=1 -DPRODUCT_STRING="Vaaman Prog" ..
+# Drive an external FPGA board from header pins instead of the on-board Trion:
+#   cmake -DALT_PINS=1 ..     TCK=GPIO9 TDI=GPIO8 TDO=GPIO7 TMS=GPIO6
+# JTAG pinout, order TCK TDI TDO TMS. Defaults to the Zen pinout above.
+if(JTAG_PINS)
+    list(GET JTAG_PINS 0 _tck)
+    list(GET JTAG_PINS 1 _tdi)
+    list(GET JTAG_PINS 2 _tdo)
+    list(GET JTAG_PINS 3 _tms)
+    target_compile_definitions(zen_jtag PRIVATE
+        PIN_TCK=${_tck} PIN_TDI=${_tdi} PIN_TDO=${_tdo} PIN_TMS=${_tms})
+    message(STATUS "JTAG pins: TCK=${_tck} TDI=${_tdi} TDO=${_tdo} TMS=${_tms}")
+else()
+    message(STATUS "JTAG pins: default TCK=30 TDI=31 TDO=32 TMS=33")
+endif()
+
+if(BUILD_TAG)
+    target_compile_definitions(zen_jtag PRIVATE FW_BUILD_TAG="${BUILD_TAG}")
+endif()
+
+# Retarget the JTAG pins without editing sources, e.g. back to the on-board
+# Trion:  cmake -DJTAG_PINS="30;31;32;33" ..   (order: TCK TDI TDO TMS)
+if(JTAG_PINS)
+    list(GET JTAG_PINS 0 _tck)
+    list(GET JTAG_PINS 1 _tdi)
+    list(GET JTAG_PINS 2 _tdo)
+    list(GET JTAG_PINS 3 _tms)
+    target_compile_definitions(zen_jtag PRIVATE
+        PIN_TCK=${_tck} PIN_TDI=${_tdi} PIN_TDO=${_tdo} PIN_TMS=${_tms})
+    message(STATUS "JTAG pins: TCK=${_tck} TDI=${_tdi} TDO=${_tdo} TMS=${_tms}")
+endif()
+
+if(SINGLE_CHANNEL)
+    target_compile_definitions(zen_jtag PRIVATE FTDI_SINGLE_CHANNEL=1)
+endif()
+
+if(PRODUCT_STRING)
+    target_compile_definitions(zen_jtag PRIVATE FTDI_STR_PRODUCT="${PRODUCT_STRING}")
+endif()
+
+if(FTDI_AS_D)
+    target_compile_definitions(zen_jtag PRIVATE FTDI_BCD_DEVICE=0x0500)
+endif()
+
+pico_add_extra_outputs(zen_jtag)

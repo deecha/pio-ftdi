@@ -1,0 +1,114 @@
+// board_config.h - Zen board pin map and tunables
+#ifndef BOARD_CONFIG_H
+#define BOARD_CONFIG_H
+
+// First: several decisions below key off SDK macros, and some sources include
+// this header before any SDK header.
+#include "pico.h"
+
+// ---------------------------------------------------------------------------
+// JTAG pins (RP2350B, QFN-80).  From the Zen schematic:
+//   GPIO30 = pin 38 = TCK
+//   GPIO31 = pin 39 = TDI
+//   GPIO32 = pin 40 = TDO
+//   GPIO33 = pin 42 = TMS
+// ---------------------------------------------------------------------------
+#ifndef PIN_TCK
+#define PIN_TCK   30
+#define PIN_TDI   31
+#define PIN_TDO   32
+#define PIN_TMS   33
+#endif
+
+// PIO on RP2350B sees a 32-GPIO window; base 16 covers GPIO16..47. RP2040's
+// PIO reaches every GPIO directly and has no window, so the base is 0 there
+// and PREL() below becomes the identity.
+#if PICO_PIO_USE_GPIO_BASE
+  #if (PIN_TCK < 16) || (PIN_TDI < 16) || (PIN_TDO < 16) || (PIN_TMS < 16)
+    #define PIO_GPIO_BASE 0
+  #else
+    #define PIO_GPIO_BASE 16
+  #endif
+#else
+  #define PIO_GPIO_BASE 0
+#endif
+
+// Relative pin index for DIRECT writes to the PINCTRL register, whose pin
+// fields are relative to PIO_GPIO_BASE. Verified against pico-sdk 2.1.1:
+// sm_config_set_*_pins() take ABSOLUTE GPIO numbers and pio_sm_set_config()
+// subtracts the base itself, so PREL() is only for raw register writes.
+#define PREL(g) ((g) - PIO_GPIO_BASE)
+
+// ---------------------------------------------------------------------------
+// Clocking
+// ---------------------------------------------------------------------------
+#define JTAG_SYS_CLK_KHZ  SYS_CLK_KHZ   // SDK default: 150000 / 125000
+#define JTAG_MAX_TCK_HZ   12000000u   // clamp; PIO ceiling is clk_sys/12 = 12.5 MHz
+
+// TDO idle bias. Bring-up diagnostic: if readings follow whichever pull is
+// selected here, nothing is driving TDO. 0 = pull-down, 1 = pull-up.
+#ifndef TDO_PULL_UP
+#define TDO_PULL_UP 1
+#endif
+#define JTAG_MIN_TCK_HZ   1000u
+
+// ---------------------------------------------------------------------------
+// USB identity.  0x0403:0x6010 is FT2232C/D/H.
+//   bcdDevice 0x0700 -> FT2232H  (high speed part, full MPSSE command set)
+//   bcdDevice 0x0500 -> FT2232D  (full speed part, no 0x8A/0x8B/0x8C/0x8D)
+// We enumerate as full-speed with 64-byte endpoints either way, because the
+// RP2350 USB controller is full-speed only. Start with H; fall back to D only
+// if the host rejects the 64-byte endpoints. See README.
+// ---------------------------------------------------------------------------
+// FTDI_SINGLE_CHANNEL: emulate an FT232H (one channel) instead of an FT2232H.
+// Worth preferring when a known-good FT232H cable exists for the target tool --
+// cloning an identity that already works beats guessing what the host accepts.
+//   cmake -DSINGLE_CHANNEL=1 ..
+#ifndef FTDI_SINGLE_CHANNEL
+#define FTDI_SINGLE_CHANNEL 0
+#endif
+
+#define FTDI_VID          0x0403
+
+#if FTDI_SINGLE_CHANNEL
+#define FTDI_PID          0x6014      // FT232H
+#ifndef FTDI_BCD_DEVICE
+#define FTDI_BCD_DEVICE   0x0900
+#endif
+#else
+#define FTDI_PID          0x6010      // FT2232C/D/H
+#ifndef FTDI_BCD_DEVICE
+#define FTDI_BCD_DEVICE   0x0700
+#endif
+#endif
+
+// Efinity lists cables by their USB product string. If your Trion dev kit
+// reports something else, put that string here so Efinity treats this the
+// same way.  "Dual RS232-HS" is the stock FT2232H description.
+// Bump on every reflash during bring-up; shows up as the first two chars
+// after "FT" in iSerial, so `lsusb -v | grep iSerial` confirms what is running.
+#define FW_BUILD_TAG "C4"
+
+#define FTDI_STR_MANUFACTURER "FTDI"
+#if FTDI_SINGLE_CHANNEL
+// "Single RS232-HS" is the stock FT232H string. If Efinity is fussy, set this
+// to the exact product string of a cable already known to work with it.
+#ifndef FTDI_STR_PRODUCT
+#define FTDI_STR_PRODUCT  "Single RS232-HS"
+#endif
+#else
+#define FTDI_STR_PRODUCT  "Dual RS232-HS"
+#endif
+
+// Status bytes prefixed to every bulk IN packet.
+#define FTDI_MODEM_STATUS 0x01
+#define FTDI_LINE_STATUS  0x60   // THRE | TEMT
+
+// ---------------------------------------------------------------------------
+// Optional: map MPSSE ADBUS4..7 / ACBUS0..7 to real GPIOs (e.g. FPGA CRESET_N).
+// Set to -1 for unused. Fill these in if Efinity toggles a reset line.
+// ---------------------------------------------------------------------------
+#define ADBUS_AUX_PINS { -1, -1, -1, -1 }   // ADBUS4,5,6,7
+#define ACBUS_AUX_PINS { -1, -1, -1, -1, -1, -1, -1, -1 }
+
+#endif
