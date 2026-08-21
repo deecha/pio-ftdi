@@ -1,3 +1,0 @@
-/home/claude/fix/pio-ftdi/_p/_deps/picotool-subbuild/CMakeFiles/picotool-populate.dir
-/home/claude/fix/pio-ftdi/_p/_deps/picotool-subbuild/CMakeFiles/edit_cache.dir
-/home/claude/fix/pio-ftdi/_p/_deps/picotool-subbuild/CMakeFiles/rebuild_cache.dir

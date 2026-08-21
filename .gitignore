@@ -1,6 +1,7 @@
 build/
 build-*/
 _b/
+_p/
 pico_sdk_import.cmake
 *.uf2
 *.elf
