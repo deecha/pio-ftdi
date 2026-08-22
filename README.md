@@ -40,8 +40,14 @@ The tinyusb submodule is **required** — without it the link fails on missing
 
 ```sh
 cmake -DSINGLE_CHANNEL=1 ..                                    # RP2350B, pins 30/31/32/33
+cmake -DPICO_BOARD=zen -DSINGLE_CHANNEL=1 ..                   # a board file's own pinout
 cmake -DSINGLE_CHANNEL=1 -DJTAG_PINS="20;19;18;17" ..          # RP2350B, other pins
 cmake -DRP2040=1 -DSINGLE_CHANNEL=1 -DJTAG_PINS="6;7;8;9" ..   # RP2040
+
+A board file can carry both the chip variant and a default pinout, so anyone
+with that board passes only `-DPICO_BOARD=<name>`. See [boards/](boards) for
+the list and how to add one. Precedence is `-DJTAG_PINS` > board file >
+`board_config.h`.
 ```
 
 Pin numbers must have **no leading zeros** — `08` is an invalid octal literal.

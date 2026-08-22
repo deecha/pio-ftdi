@@ -10,7 +10,9 @@ if(RP2040)
     endif()
 else()
     set(PICO_PLATFORM rp2350 CACHE STRING "")
-    set(PICO_BOARD rp2350b CACHE STRING "")
+    if(NOT DEFINED PICO_BOARD)
+        set(PICO_BOARD rp2350b CACHE STRING "")
+    endif()
 endif()
 list(APPEND PICO_BOARD_HEADER_DIRS ${CMAKE_CURRENT_LIST_DIR}/boards)
 
@@ -54,7 +56,8 @@ endif()
 #   cmake -DSINGLE_CHANNEL=1 -DPRODUCT_STRING="Vaaman Prog" ..
 # Drive an external FPGA board from header pins instead of the on-board Trion:
 #   cmake -DALT_PINS=1 ..     TCK=GPIO9 TDI=GPIO8 TDO=GPIO7 TMS=GPIO6
-# JTAG pinout, order TCK TDI TDO TMS. Defaults to the pinout in board_config.h.
+# JTAG pinout, order TCK TDI TDO TMS. Overrides whatever the board file (or
+# board_config.h) sets, so a board default never blocks a one-off wiring.
 if(JTAG_PINS)
     list(GET JTAG_PINS 0 _tck)
     list(GET JTAG_PINS 1 _tdi)
