@@ -67,7 +67,7 @@ if(JTAG_PINS)
         PIN_TCK=${_tck} PIN_TDI=${_tdi} PIN_TDO=${_tdo} PIN_TMS=${_tms})
     message(STATUS "JTAG pins: TCK=${_tck} TDI=${_tdi} TDO=${_tdo} TMS=${_tms}")
 else()
-    message(STATUS "JTAG pins: default TCK=30 TDI=31 TDO=32 TMS=33")
+    message(STATUS "JTAG pins: from board file or board_config.h defaults")
 endif()
 
 if(BUILD_TAG)

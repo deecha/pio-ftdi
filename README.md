@@ -40,7 +40,9 @@ The tinyusb submodule is **required** — without it the link fails on missing
 
 ```sh
 cmake -DSINGLE_CHANNEL=1 ..                                    # RP2350B, pins 30/31/32/33
-cmake -DPICO_BOARD=zen -DSINGLE_CHANNEL=1 ..                   # a board file's own pinout
+cmake -DRP2040=1 -DPICO_BOARD=pico_jtag -DSINGLE_CHANNEL=1 ..  # Pico,   pins 1/2/3/4
+cmake -DPICO_BOARD=pico2_jtag -DSINGLE_CHANNEL=1 ..            # Pico 2, pins 1/2/3/4
+cmake -DPICO_BOARD=zen -DSINGLE_CHANNEL=1 ..                   # RP2350B + Trion T4
 cmake -DSINGLE_CHANNEL=1 -DJTAG_PINS="20;19;18;17" ..          # RP2350B, other pins
 cmake -DRP2040=1 -DSINGLE_CHANNEL=1 -DJTAG_PINS="6;7;8;9" ..   # RP2040
 
@@ -76,6 +78,45 @@ the pins so a pinout change cannot pick the wrong one.
 Everything else is shared. The system clock is never set explicitly — TCK is
 derived from `clk_sys` at runtime, so 125 MHz and 150 MHz both come out right
 with no per-part constants. Pin range checks use `NUM_BANK0_GPIOS`.
+
+## Wiring
+
+Four signals plus a common ground. JTAG passes straight through — unlike a
+UART, TDI does **not** cross to TDO.
+
+| Adapter | Target FPGA |
+|---|---|
+| TCK | TCK |
+| TDI | TDI |
+| TDO | TDO |
+| TMS | TMS |
+| GND | GND |
+
+**Ground is not optional.** Between two separately powered boards, four signal
+wires with no common ground gives you a floating TDO that reads as all-ones —
+which looks exactly like a dead target.
+
+**Check the IO voltage.** The RP2040/RP2350 drive 3.3V. If the target's JTAG
+bank runs at 1.8V, driving it directly is out of spec; use level shifters.
+
+TDO is biased high internally, so an undriven line reads all-ones. That is also
+the correct idle reading from a healthy target: a JTAG TAP tri-states TDO except
+during Shift-DR/Shift-IR, so a high TDO on its own tells you nothing.
+
+### Default pinouts
+
+| Board file | TCK | TDI | TDO | TMS |
+|---|---|---|---|---|
+| `pico_jtag` (Pico, RP2040) | GPIO1 | GPIO2 | GPIO3 | GPIO4 |
+| `pico2_jtag` (Pico 2, RP2350A) | GPIO1 | GPIO2 | GPIO3 | GPIO4 |
+| `zen` (RP2350B + Trion T4) | GPIO30 | GPIO31 | GPIO32 | GPIO33 |
+| none — `board_config.h` default | GPIO30 | GPIO31 | GPIO32 | GPIO33 |
+
+These are GPIO numbers, not physical pin numbers. On a Pico, GPIO1-4 are
+physical pins 2, 4, 5 and 6.
+
+Any GPIO works. On RP2350B all four must sit within one 32-GPIO PIO window
+(0-31 or 16-47); a `_Static_assert` fails the build otherwise.
 
 ## Bring-up
 

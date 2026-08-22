@@ -3,12 +3,16 @@
 A board file gives the SDK the chip variant and, optionally, a default JTAG
 pinout — so `-DPICO_BOARD=<name>` is all someone with that board has to pass.
 
-| File | Board |
-|---|---|
-| `rp2350b.h` | any RP2350B (QFN-80, 48 GPIO), no pinout |
-| `zen.h` | Vicharak Zen — RP2350B + Efinix Trion T4F81 |
+| File | Board | Pins (TCK/TDI/TDO/TMS) | Extra flag |
+|---|---|---|---|
+| `pico_jtag.h` | Raspberry Pi Pico (RP2040) | GPIO 1/2/3/4 | `-DRP2040=1` |
+| `pico2_jtag.h` | Raspberry Pi Pico 2 (RP2350A) | GPIO 1/2/3/4 | — |
+| `zen.h` | Vicharak Zen (RP2350B + Trion T4F81) | GPIO 30/31/32/33 | — |
+| `rp2350b.h` | any RP2350B, no pinout | — | — |
 
-A stock Pico or Pico 2 needs nothing here; the SDK ships those headers.
+The names deliberately do not match the SDK's own `pico` and `pico2`: this
+directory is searched **before** the SDK's `boards/`, so reusing those names
+would shadow the real headers and lose everything they define.
 
 ## Adding one
 
