@@ -1,5 +1,5 @@
 ;
-; jtag.pio - single-SM JTAG shifter for the Zen board
+; jtag.pio - single-SM JTAG shifter
 ;
 ; One program, two PINCTRL configurations (swapped from C):
 ;

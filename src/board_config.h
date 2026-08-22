@@ -1,4 +1,4 @@
-// board_config.h - Zen board pin map and tunables
+// board_config.h - pin map and build-time options
 #ifndef BOARD_CONFIG_H
 #define BOARD_CONFIG_H
 
@@ -7,7 +7,7 @@
 #include "pico.h"
 
 // ---------------------------------------------------------------------------
-// JTAG pins (RP2350B, QFN-80).  From the Zen schematic:
+// JTAG pins. Default is an RP2350B (QFN-80) layout:
 //   GPIO30 = pin 38 = TCK
 //   GPIO31 = pin 39 = TDI
 //   GPIO32 = pin 40 = TDO

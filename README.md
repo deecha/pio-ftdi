@@ -33,7 +33,7 @@ make -j$(nproc)
 ```
 
 The tinyusb submodule is **required** — without it the link fails on missing
-`tud_*` symbols. Output is `build/zen_jtag.uf2`; RP2040 boards mount as
+`tud_*` symbols. Output is `build/pio_ftdi.uf2`; RP2040 boards mount as
 `RPI-RP2`, RP2350 as `RP2350`.
 
 ### Configurations
