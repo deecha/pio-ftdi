@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 3.13)
 
+set(CMAKE_C_COMPILER /opt/Xilinx/Vitis/2023.2/gnu/aarch32/lin/gcc-arm-none-eabi/bin/arm-none-eabi-gcc CACHE FILEPATH "" FORCE)
+
+set(CMAKE_CXX_COMPILER /opt/Xilinx/Vitis/2023.2/gnu/aarch32/lin/gcc-arm-none-eabi/bin/arm-none-eabi-gcc CACHE FILEPATH "" FORCE)
+
 # RP2350B by default -- an unqualified `cmake ..` reproduces the working
 # configuration. For RP2040:
 #   cmake -DRP2040=1 -DJTAG_PINS="6;7;8;9" ..
@@ -21,6 +25,14 @@ include(pico_sdk_import.cmake)
 project(pio_ftdi C CXX ASM)
 set(CMAKE_C_STANDARD 11)
 
+add_compile_options(
+    -mcpu=cortex-m33
+    -mthumb
+    -nostdlib
+    -nostartfiles
+    -nodefaultlibs
+)
+
 pico_sdk_init()
 
 add_executable(pio_ftdi
@@ -28,11 +40,25 @@ add_executable(pio_ftdi
     src/jtag_pio.c
     src/mpsse.c
     src/ftdi_usb.c
+    src/syscalls.c
+    src/stubs.c
 )
+
+# FORCE THE ELF EXTENSION TO SATISFY THE XILINX COMPILER DRIVER
+set_target_properties(pio_ftdi PROPERTIES SUFFIX ".elf")
 
 pico_generate_pio_header(pio_ftdi ${CMAKE_CURRENT_LIST_DIR}/src/jtag.pio)
 
 target_include_directories(pio_ftdi PRIVATE ${CMAKE_CURRENT_LIST_DIR}/src)
+
+target_link_options(pio_ftdi PRIVATE 
+    -nostdlib
+    -nodefaultlibs
+    -nostartfiles
+    -mcpu=cortex-m33
+    -mthumb
+    -ffreestanding
+)
 
 target_link_libraries(pio_ftdi
     pico_stdlib
